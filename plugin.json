@@ -9,7 +9,7 @@
   "description": "This plugin adds the format Tracdelight.com to the Elastic Export.",
   "shortDescription": {
     "de": "Das Plugin ElasticExportTracdelightCOM fügt das Datenformat TracdelightCOM-Plugin zum Elastischen Export hinzu.",
-    "en": "This plugin adds the format TracdelightCOM-Plugin to the Elastic Export."
+    "en": "This plugin adds the format TracdelightCOM-Plugin to the elastic export."
   },
   "categories": [
     "3523"
