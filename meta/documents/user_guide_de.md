@@ -7,7 +7,7 @@
 
 Tracdelight.com ist ein Netzwerk für Werbeagenturen und Verlage, das sich auf Fashion, Mode und Lifestyle fokussiert.
 
-## Elastic Export TracdelightCOM-Plugin in plentymarkets einrichten
+## Datenformat TracdelightCOM-Plugin in plentymarkets einrichten
 
 Um dieses Format nutzen zu können, benötigen Sie das Plugin Elastic Export.
 
