@@ -150,7 +150,7 @@ class TracdelightCOM extends CSVPluginGenerator
                 $rrp = $rrp > $price ? $rrp : '';
 
                 // Get shipping costs
-                $shippingCost = $this->elasticExportCoreHelper->getShippingCost($variation, $settings);
+                $shippingCost = $this->elasticExportCoreHelper->getShippingCost($variation['data']['item']['id'], $settings);
                 if(!is_null($shippingCost))
                 {
                     $shippingCost = number_format((float)$shippingCost, 2, ',', '');
@@ -173,7 +173,7 @@ class TracdelightCOM extends CSVPluginGenerator
                     'Währung'               => $this->idlVariations[$variation['id']]['variationRetailPrice.currency'],
                     'Marke'                 => $this->elasticExportCoreHelper->getExternalManufacturerName((int)$variation['data']['item']['manufacturer']['id']),
                     'Versandkosten'         => $shippingCost,
-                    'Geschlecht'            => $this->getProperty($variation, $settings, 'size') ? $this->getProperty($variation, $settings, 'size') : $this->getStandardGender((string)$settings->get('gender')), // only mandatory for clothes
+                    'Geschlecht'            => $this->getProperty($variation, $settings, 'size') ? $this->getProperty($variation, $settings, 'size') : $this->getProperty($variation, $settings, 'gender'), // only mandatory for clothes
                     'Grundpreis'            => $this->elasticExportCoreHelper->getBasePrice($variation, $this->idlVariations[$variation['id']], $settings->get('lang')), // only mandatory for cosmetics
                     
                     // Optional fields
@@ -198,7 +198,7 @@ class TracdelightCOM extends CSVPluginGenerator
     /**
      * Check if gender string is valid.
      * 
-     * @param string $gender
+     * @param  string $gender
      * @return string
      */
     private function getStandardGender(string $gender = ''):string
@@ -224,9 +224,9 @@ class TracdelightCOM extends CSVPluginGenerator
     }
 
     /**
+     * Get the image by corespondent number.
      *
-     *
-     * @param array $variation
+     * @param array    $variation
      * @param KeyValue $settings
      * @param int $number
      * @return string
@@ -248,7 +248,7 @@ class TracdelightCOM extends CSVPluginGenerator
     /**
      * Get variation attributes.
      *
-     * @param  array   $variation
+     * @param  array    $variation
      * @param  KeyValue $settings
      * @return array<string,string>
      */
@@ -256,56 +256,47 @@ class TracdelightCOM extends CSVPluginGenerator
     {
         $variationAttributes = [];
 
-        foreach($variation->variationAttributeValueList as $variationAttribute)
+        // Go through all the attributes
+        foreach($variation['data']['attributes'] as $variationAttribute)
         {
-            $attributeValueName = $this->attributeValueNameRepository->findOne($variationAttribute->attributeValueId, $settings->get('lang'));
+            $attributeValueName = $this->attributeValueNameRepository->findOne($variationAttribute['valueId'], $settings->get('lang'));
 
             if($attributeValueName instanceof AttributeValueName)
             {
+                // Check if the attribute is available for Tracdelight
                 if($attributeValueName->attributeValue->tracdelightValue)
                 {
-                    $variationAttributes[$attributeValueName->attributeValue->tracdelightValue][] = $attributeValueName->name;
+                    // Get the color and size attribute value
+                    if(($attributeValueName->attributeValue->attribute->backendName == 'Color' || $attributeValueName->attributeValue->attribute->backendName == 'Size')
+                        && !is_null($attributeValueName->attributeValue->tracdelightValue))
+                    {
+                        $variationAttributes[strtolower($attributeValueName->attributeValue->attribute->backendName)] = $attributeValueName->attributeValue->tracdelightValue;
+                    }
                 }
             }
         }
 
-        $tracdelightAttributes = [];
-
-        foreach($variationAttributes as $attribute)
-        {
-            if(array_key_exists('Color', $attribute) && is_array($attribute['Color']))
-            {
-                $tracdelightAttributes['color'] = implode(', ', $attribute['Color']);
-            }
-
-            if(array_key_exists('Size', $attribute) && is_array($attribute['Size']))
-            {
-                $tracdelightAttributes['size'] = implode(', ', $attribute['Size']);
-            }
-
-        }
-
-        return $tracdelightAttributes;
+        return $variationAttributes;
     }
 
     /**
      * Get property.
      *
-     * @param  Record   $variation
+     * @param  array    $variation
      * @param  KeyValue $settings
      * @param  string   $property
      * @return string
      */
-    private function getProperty(Record $variation, KeyValue $settings, string $property):string
+    private function getProperty($variation, KeyValue $settings, string $property):string
     {
-        if (count($this->itemPropertyCache[$variation->itemBase->id]) == 0)
+        if (count($this->itemPropertyCache[$variation['id']]) == 0)
         {
-            $this->itemPropertyCache[$variation->itemBase->id] =  array_merge($this->getVariationAttributes($variation, $settings), $this->getItemPropertyList($variation, $settings));
+            $this->itemPropertyCache[$variation['id']] =  array_merge($this->getVariationAttributes($variation, $settings), $this->getItemPropertyList($variation, $settings));
         }
 
-        if(array_key_exists($property, $this->itemPropertyCache[$variation->itemBase->id]))
+        if(array_key_exists($property, $this->itemPropertyCache[$variation['id']]))
         {
-            return $this->itemPropertyCache[$variation->itemBase->id][$property];
+            return $this->itemPropertyCache[$variation['id']][$property];
         }
 
         return '';
@@ -315,15 +306,15 @@ class TracdelightCOM extends CSVPluginGenerator
     /**
      * Get item properties.
      *
-     * @param 	array $variation
-     * @param   KeyValue $settings
+     * @param  array $variation
+     * @param  KeyValue $settings
      * @return array<string,string>
      */
     protected function getItemPropertyList($variation, KeyValue $settings):array
     {
         $list = [];
 
-        $characterMarketComponentList = $this->elasticExportCoreHelper->getItemCharactersByComponent($variation, self::TRACDELIGHT_COM);
+        $characterMarketComponentList = $this->elasticExportCoreHelper->getItemCharactersByComponent($this->idlVariations[$variation['id']], self::TRACDELIGHT_COM);
 
         if(count($characterMarketComponentList))
         {
@@ -335,7 +326,7 @@ class TracdelightCOM extends CSVPluginGenerator
                 {
                     if((string) $data['characterValueType'] == 'selection')
                     {
-                        $propertySelection = $this->propertySelectionRepository->findOne((int) $data['characterValue'], 'de');
+                        $propertySelection = $this->propertySelectionRepository->findOne((int) $data['characterValue'], $settings->get('lang'));
                         if($propertySelection instanceof PropertySelection)
                         {
                             $list[(string) $data['externalComponent']] = (string) $propertySelection->name;
@@ -345,18 +336,8 @@ class TracdelightCOM extends CSVPluginGenerator
                     {
                         $list[(string) $data['externalComponent']] = (string) $data['characterValue'];
                     }
-
                 }
             }
-        }
-        //check gender string
-        if (strlen($list['gender']) == 0)
-        {
-            $this->itemPropertyCache[$variation->itemBase->id]['gender'] = $this->getStandardGender((string)$settings->get('gender'));
-        }
-        else
-        {
-            $this->itemPropertyCache[$variation->itemBase->id]['gender'] = $this->getStandardGender((string)$this->itemPropertyCache[$variation->itemBase->id]['gender']);
         }
 
         return $list;
@@ -378,6 +359,7 @@ class TracdelightCOM extends CSVPluginGenerator
                     $this->idlVariations[$idlVariation->variationBase->id] = [
                         'itemBase.id' => $idlVariation->itemBase->id,
                         'variationBase.id' => $idlVariation->variationBase->id,
+                        'itemPropertyList' => $idlVariation->itemPropertyList,
                         'variationRetailPrice.price' => $idlVariation->variationRetailPrice->price,
                         'variationRetailPrice.currency' => $idlVariation->variationRetailPrice->currency,
                         'variationRecommendedRetailPrice.price' => $idlVariation->variationRecommendedRetailPrice->price,

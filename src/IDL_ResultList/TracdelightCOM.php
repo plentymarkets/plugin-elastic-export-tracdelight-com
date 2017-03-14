@@ -51,6 +51,16 @@ class TracdelightCOM
                     'id',
                 ),
 
+                'itemPropertyList' => array(
+                    'params' => array(),
+                    'fields' => array(
+                        'itemPropertyId',
+                        'propertyId',
+                        'propertyValue',
+                        'propertyValueType',
+                    )
+                ),
+
                 'variationRetailPrice' => array(
                     'params' => array(
                         'referrerId' => $settings->get('referrerId') ? $settings->get('referrerId') : self::TRACDELIGHT_COM,

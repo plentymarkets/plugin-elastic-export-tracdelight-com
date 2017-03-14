@@ -14,6 +14,10 @@
   "categories": [
     "3523"
   ],
+  "marketplaceName": {
+    "de":"Tracdelight.com",
+    "en":"Tracdelight.com"
+  },
   "author": "plentymarkets GmbH",
   "authorIcon": "icon_author_xs.png",
   "serviceProvider": "ElasticExportTracdelightCOM\\ElasticExportTracdelightCOMServiceProvider"

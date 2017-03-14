@@ -24,6 +24,7 @@ class TracdelightCOM extends ResultFields
 
     /**
      * TracdelightCOM constructor.
+     *
      * @param ArrayHelper $arrayHelper
      */
     public function __construct(ArrayHelper $arrayHelper)
