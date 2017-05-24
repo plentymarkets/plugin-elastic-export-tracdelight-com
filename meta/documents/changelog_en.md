@@ -1,5 +1,10 @@
 # Release Notes for Elastic Export Tracdelight.com
 
+## v1.0.3 (2017-05-24)
+
+### Changed
+- The plugin Elastic Export is now required to use the plugin format Tracdelight.com.
+
 ## v1.0.2 (2017-03-23)
 
 ### Fixed
