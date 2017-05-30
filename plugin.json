@@ -18,7 +18,7 @@
     "de":"tracdelight",
     "en":"tracdelight"
   },
-  "dependencies": {
+  "require": {
     "ElasticExport": ">=1.0.18"
   },
   "author": "plentymarkets GmbH",
