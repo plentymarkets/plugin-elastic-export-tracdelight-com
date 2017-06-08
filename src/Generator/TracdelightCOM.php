@@ -225,7 +225,7 @@ class TracdelightCOM extends CSVPluginGenerator
 			// Optional fields
 			'Streichpreis'          => $rrp,
 			'Lieferzeit'            => $this->elasticExportHelper->getAvailability($variation, $settings, false),
-			'Produktstamm-ID'       => $variation['id'],
+			'Produktstamm-ID'       => $variation['data']['item']['id'],
 			'EAN'                   => $this->elasticExportHelper->getBarcodeByType($variation, $settings->get('barcode')),
 			'Bild2-URL'             => $this->getImageByNumber($variation, $settings, 1),
 			'Bild3-URL'             => $this->getImageByNumber($variation, $settings, 2),

@@ -2,6 +2,7 @@
 
 namespace ElasticExportTracdelightCOM\ResultField;
 
+use Plenty\Modules\Cloud\ElasticSearch\Lib\ElasticSearch;
 use Plenty\Modules\Cloud\ElasticSearch\Lib\Source\Mutator\BuiltIn\LanguageMutator;
 use Plenty\Modules\DataExchange\Contracts\ResultFields;
 use Plenty\Modules\Helper\Services\ArrayHelper;
@@ -47,7 +48,7 @@ class TracdelightCOM extends ResultFields
 
         $reference = $settings->get('referrerId') ? $settings->get('referrerId') : self::TRACDELIGHT_COM;
 
-        $this->setOrderByList(['variation.itemId', 'ASC']);
+		$this->setOrderByList(['item.id', ElasticSearch::SORTING_ORDER_ASC]);
 
         $itemDescriptionFields = ['texts.urlPath', 'texts.keywords'];
 
