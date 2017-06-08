@@ -32,7 +32,8 @@ class ElasticExportTracdelightCOMServiceProvider extends DataExchangeServiceProv
             'ElasticExportTracdelightCOM\ResultField\TracdelightCOM',
             'ElasticExportTracdelightCOM\Generator\TracdelightCOM',
             '',
-            true
+            true,
+			true
         );
     }
 }

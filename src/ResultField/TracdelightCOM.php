@@ -5,7 +5,10 @@ namespace ElasticExportTracdelightCOM\ResultField;
 use Plenty\Modules\Cloud\ElasticSearch\Lib\Source\Mutator\BuiltIn\LanguageMutator;
 use Plenty\Modules\DataExchange\Contracts\ResultFields;
 use Plenty\Modules\Helper\Services\ArrayHelper;
+use Plenty\Modules\Item\Search\Mutators\BarcodeMutator;
+use Plenty\Modules\Item\Search\Mutators\DefaultCategoryMutator;
 use Plenty\Modules\Item\Search\Mutators\ImageMutator;
+use Plenty\Modules\Item\Search\Mutators\KeyMutator;
 
 
 /**
@@ -70,6 +73,8 @@ class TracdelightCOM extends ResultFields
             $itemDescriptionFields[] = 'texts.technicalData';
         }
 
+        $itemDescriptionFields[] = 'texts.lang';
+
         // Mutators
         /**
          * @var ImageMutator $imageMutator
@@ -80,10 +85,40 @@ class TracdelightCOM extends ResultFields
             $imageMutator->addMarket($reference);
         }
 
+		/**
+		 * @var BarcodeMutator $barcodeMutator
+		 */
+		$barcodeMutator = pluginApp(BarcodeMutator::class);
+		if($barcodeMutator instanceof BarcodeMutator)
+		{
+			$barcodeMutator->addMarket($reference);
+		}
+
+		/**
+		 * @var DefaultCategoryMutator $defaultCategoryMutator
+		 */
+		$defaultCategoryMutator = pluginApp(DefaultCategoryMutator::class);
+
+		if($defaultCategoryMutator instanceof DefaultCategoryMutator)
+		{
+			$defaultCategoryMutator->setPlentyId($settings->get('plentyId'));
+		}
+
         /**
          * @var LanguageMutator $languageMutator
          */
         $languageMutator = pluginApp(LanguageMutator::class, [[$settings->get('lang')]]);
+
+		/**
+		 * @var KeyMutator
+		 */
+		$keyMutator = pluginApp(KeyMutator::class);
+
+		if($keyMutator instanceof KeyMutator)
+		{
+			$keyMutator->setKeyList($this->getKeyList());
+			$keyMutator->setNestedKeyList($this->getNestedKeyList());
+		}
 
         // Fields
         $fields = [
@@ -134,9 +169,20 @@ class TracdelightCOM extends ResultFields
                 'attributes.attributeId',
                 'attributes.valueId',
                 'attributes.attributeValueSetId',
+
+				//properties
+				'properties.property.id',
+				'properties.property.valueType',
+				'properties.selection.name',
+				'properties.selection.lang',
+				'properties.texts.value',
+				'properties.texts.lang'
             ],
             [
                 $languageMutator,
+				$imageMutator,
+				$defaultCategoryMutator,
+				$barcodeMutator
             ],
         ];
 
@@ -154,4 +200,104 @@ class TracdelightCOM extends ResultFields
 
         return $fields;
     }
+
+    private function getKeyList()
+	{
+		return [
+			// Item
+			'item.id',
+			'item.manufacturer.id',
+
+			// Variation
+			'variation.availability.id',
+			'variation.stockLimitation',
+
+			// Unit
+			'unit.content',
+			'unit.id',
+		];
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getNestedKeyList()
+	{
+		return [
+			'keys' => [
+				// Attributes
+				'attributes',
+
+				// Barcodes
+				'barcodes',
+
+				// Default categories
+				'defaultCategories',
+
+				// Images
+				'images.all',
+				'images.item',
+				'images.variation',
+			],
+
+			'nestedKeys' => [
+				// Attributes
+				'attributes' => [
+					'attributeValueSetId',
+					'attributeId',
+					'valueId'
+				],
+
+				// Barcodes
+				'barcodes' => [
+					'id',
+					'code',
+					'type'
+				],
+
+				// Default categories
+				'defaultCategories' => [
+					'id'
+				],
+
+				// Images
+				'images.all' => [
+					'urlMiddle',
+					'urlPreview',
+					'urlSecondPreview',
+					'url',
+					'path',
+					'position',
+				],
+				'images.item' => [
+					'urlMiddle',
+					'urlPreview',
+					'urlSecondPreview',
+					'url',
+					'path',
+					'position',
+				],
+				'images.variation' => [
+					'urlMiddle',
+					'urlPreview',
+					'urlSecondPreview',
+					'url',
+					'path',
+					'position',
+				],
+
+				// texts
+				'texts' => [
+					'urlPath',
+					'name1',
+					'name2',
+					'name3',
+					'shortDescription',
+					'description',
+					'technicalData',
+					'lang'
+				],
+			]
+		];
+	}
 }

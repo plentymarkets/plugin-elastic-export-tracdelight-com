@@ -1,5 +1,10 @@
 # Release Notes für Elastic Export Tracdelight.com
 
+## v1.0.4 (2017-06-08)
+
+### Behoben
+- Es wurde ein Fehler behoben, der dazu geführt hat, dass die Erstellung der Datei abgebrochen wurde.
+
 ## v1.0.3 (2017-05-29)
 
 ### Geändert
