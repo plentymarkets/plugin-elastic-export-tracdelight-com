@@ -180,9 +180,9 @@ class TracdelightCOM extends ResultFields
             ],
             [
                 $languageMutator,
-				$imageMutator,
 				$defaultCategoryMutator,
-				$barcodeMutator
+				$barcodeMutator,
+				$keyMutator
             ],
         ];
 

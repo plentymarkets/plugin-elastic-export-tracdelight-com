@@ -210,11 +210,11 @@ class TracdelightCOM extends CSVPluginGenerator
 
 			// Mandatory fields
 			'Artikelnummer'         => $variation['id'],
-			'Produkttitel'          => $this->elasticExportHelper->getName($variation, $settings),
+			'Produkttitel'          => $this->elasticExportHelper->getMutatedName($variation, $settings),
 			'Bild-URL'              => $this->elasticExportHelper->getMainImage($variation, $settings),
-			'Deeplink'              => $this->elasticExportHelper->getUrl($variation, $settings, true, false),
+			'Deeplink'              => $this->elasticExportHelper->getMutatedUrl($variation, $settings, true, false),
 			'Produkt-Kategorie'     => $this->elasticExportHelper->getCategory((int)$variation['data']['defaultCategories'][0]['id'], $settings->get('lang'), $settings->get('plentyId')),
-			'Produkt-Beschreibung'  => $this->elasticExportHelper->getDescription($variation, $settings, 256),
+			'Produkt-Beschreibung'  => $this->elasticExportHelper->getMutatedDescription($variation, $settings, 256),
 			'Preis'                 => $price['variationRetailPrice.price'],
 			'Währung'               => $priceList['currency'],
 			'Marke'                 => $this->elasticExportHelper->getExternalManufacturerName((int)$variation['data']['item']['manufacturer']['id']),
