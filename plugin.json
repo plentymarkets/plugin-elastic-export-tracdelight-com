@@ -18,9 +18,7 @@
     "de":"tracdelight",
     "en":"tracdelight"
   },
-  "require": {
-    "ElasticExport": ">=1.0.18"
-  },
+  "require": ["ElasticExport"],
   "author": "plentymarkets GmbH",
   "authorIcon": "icon_author_xs.png",
   "serviceProvider": "ElasticExportTracdelightCOM\\ElasticExportTracdelightCOMServiceProvider"
