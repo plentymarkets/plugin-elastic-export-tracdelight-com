@@ -3,7 +3,7 @@
 ## v1.0.4 (2017-06-08)
 
 ### Fixed
-- An issue was fixed which caused the File generation to crash.
+- An issue was fixed which caused the file generation to crash.
 
 ## v1.0.3 (2017-05-29)
 
