@@ -4,14 +4,12 @@ namespace ElasticExportTracdelightCOM\Generator;
 
 use ElasticExport\Helper\ElasticExportCoreHelper;
 use ElasticExport\Helper\ElasticExportPriceHelper;
+use ElasticExport\Helper\ElasticExportPropertyHelper;
 use Plenty\Modules\DataExchange\Contracts\CSVPluginGenerator;
 use Plenty\Modules\Helper\Services\ArrayHelper;
 use Plenty\Modules\Item\Attribute\Contracts\AttributeValueNameRepositoryContract;
 use Plenty\Modules\Item\Attribute\Models\AttributeValueName;
 use Plenty\Modules\Helper\Models\KeyValue;
-use Plenty\Modules\Item\Property\Contracts\PropertyMarketReferenceRepositoryContract;
-use Plenty\Modules\Item\Property\Contracts\PropertyNameRepositoryContract;
-use Plenty\Modules\Item\Property\Contracts\PropertySelectionRepositoryContract;
 use Plenty\Modules\Item\Search\Contracts\VariationElasticSearchScrollRepositoryContract;
 use ElasticExport\Helper\ElasticExportStockHelper;
 use Plenty\Plugin\Log\Loggable;
@@ -28,25 +26,30 @@ class TracdelightCOM extends CSVPluginGenerator
 
     const DELIMITER = ';';
 
-	/**
-	 * @var array $imageCache
-	 */
-    private $imageCache;
-
     /**
      * @var ElasticExportCoreHelper
      */
     private $elasticExportHelper;
 
     /**
-     * AttributeValueNameRepositoryContract $attributeValueNameRepository
+     * @var ElasticExportStockHelper
      */
-    private $attributeValueNameRepository;
+    private $elasticExportStockHelper;
 
     /**
-     * PropertySelectionRepositoryContract $propertySelectionRepository
+     * @var ElasticExportPriceHelper
      */
-    private $propertySelectionRepository;
+    private $elasticExportPriceHelper;
+
+    /**
+     * @var ElasticExportPropertyHelper
+     */
+    private $elasticExportPropertyHelper;
+
+    /**
+     * AttributeValueNameRepositoryContract
+     */
+    private $attributeValueNameRepository;
 
     /**
      * @var ArrayHelper
@@ -56,36 +59,23 @@ class TracdelightCOM extends CSVPluginGenerator
     /**
      * @var array
      */
-    private $itemPropertyCache = [];
+    private $shippingCostCache = [];
 
     /**
      * @var array
      */
-    private $idlVariations = array();
-	/**
-	 * @var ElasticExportPriceHelper
-	 */
-	private $elasticExportPriceHelper;
-	/**
-	 * @var ElasticExportStockHelper
-	 */
-	private $elasticExportStockHelper;
-
+    private $imageCache = [];
 
 	/**
 	 * TracdelightCOM constructor.
 	 *
 	 * @param ArrayHelper $arrayHelper
 	 * @param AttributeValueNameRepositoryContract $attributeValueNameRepository
-	 * @param PropertySelectionRepositoryContract $propertySelectionRepository
 	 */
-    public function __construct(ArrayHelper $arrayHelper,
-                                AttributeValueNameRepositoryContract $attributeValueNameRepository,
-                                PropertySelectionRepositoryContract $propertySelectionRepository)
+    public function __construct(ArrayHelper $arrayHelper, AttributeValueNameRepositoryContract $attributeValueNameRepository)
     {
         $this->arrayHelper                  = $arrayHelper;
         $this->attributeValueNameRepository = $attributeValueNameRepository;
-        $this->propertySelectionRepository  = $propertySelectionRepository;
 	}
     
     /**
@@ -98,183 +88,221 @@ class TracdelightCOM extends CSVPluginGenerator
     protected function generatePluginContent($elasticSearch, array $formatSettings = [], array $filter = [])
     {
         $this->elasticExportHelper = pluginApp(ElasticExportCoreHelper::class);
-        $this->elasticExportPriceHelper = pluginApp(ElasticExportPriceHelper::class);
+
         $this->elasticExportStockHelper = pluginApp(ElasticExportStockHelper::class);
+
+        $this->elasticExportPriceHelper = pluginApp(ElasticExportPriceHelper::class);
+
+        $this->elasticExportPropertyHelper = pluginApp(ElasticExportPropertyHelper::class);
 
 		$settings = $this->arrayHelper->buildMapFromObjectList($formatSettings, 'key', 'value');
 
 		$this->setDelimiter(self::DELIMITER);
 
-		$this->addCSVContent([
+        $this->addCSVContent($this->head());
 
-			// Mandatory fields
-			'Artikelnummer',
-			'Produkttitel',
-			'Bild-URL',
-			'Deeplink',
-			'Produkt-Kategorie',
-			'Produkt-Beschreibung',
-			'Preis',
-			'Währung',
-			'Marke',
-			'Versandkosten',
-			'Geschlecht', // only mandatory for clothes
-			'Grundpreis', // only mandatory for cosmetics
+        if($elasticSearch instanceof VariationElasticSearchScrollRepositoryContract)
+        {
+            // Initiate the counter for the variations limit
+            $limitReached = false;
+            $limit = 0;
 
-			// Optional fields
-			'Streichpreis',
-			'Lieferzeit',
-			'Produktstamm-ID',
-			'EAN',
-			'Bild2-URL',
-			'Bild3-URL',
-			'Bild4-URL',
-			'Bild5-URL',
-			'Größe',
-			'Farbe',
-			'Material',
-		]);
+            do
+            {
+                if($limitReached === true)
+                {
+                    break;
+                }
 
-		if($elasticSearch instanceof VariationElasticSearchScrollRepositoryContract)
-		{
-			$limitReached = false;
-			$lines = 0;
-			do
-			{
-				if($limitReached === true)
-				{
-					break;
-				}
+                // Get the data from Elastic Search
+                $resultList = $elasticSearch->execute();
 
-				$resultList = $elasticSearch->execute();
+                if(!is_null($resultList['error']) && count($resultList['error']) > 0)
+                {
+                    $this->getLogger(__METHOD__)->error('ElasticExportTracdelightCOM::logs.occurredElasticSearchErrors', [
+                        'Error message' => $resultList['error'],
+                    ]);
 
-				foreach($resultList['documents'] as $variation)
-				{
-					if($lines == $filter['limit'])
-					{
-						$limitReached = true;
-						break;
-					}
+                    break;
+                }
 
-					if(is_array($resultList['documents']) && count($resultList['documents']) > 0)
-					{
-						if($this->elasticExportStockHelper->isFilteredByStock($variation, $filter) === true)
-						{
-							continue;
-						}
+                if(is_array($resultList['documents']) && count($resultList['documents']) > 0)
+                {
+                    $previousItemId = null;
 
-						try
-						{
-							$this->buildRow($variation, $settings);
-							$lines = $lines +1;
-						}
-						catch(\Throwable $throwable)
-						{
-							$this->getLogger(__METHOD__)->error('ElasticExportTracdelightCOM::logs.fillRowError', [
-								'Error message ' => $throwable->getMessage(),
-								'Error line'    => $throwable->getLine(),
-								'VariationId'   => $variation['id']
-							]);
-						}
-					}
-				}
-			}while ($elasticSearch->hasNext());
-		}
+                    foreach($resultList['documents'] as $variation)
+                    {
+                        // Stop and set the flag if limit is reached
+                        if($limit == $filter['limit'])
+                        {
+                            $limitReached = true;
+                            break;
+                        }
+
+                        // If filtered by stock is set and stock is negative, then skip the variation
+                        if ($this->elasticExportStockHelper->isFilteredByStock($variation, $filter) === true)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            // Set the caches if we have the first variation or when we have the first variation of an item
+                            if($previousItemId === null || $previousItemId != $variation['data']['item']['id'])
+                            {
+                                $previousItemId = $variation['data']['item']['id'];
+                                unset($this->shippingCostCache);
+
+                                // Build the caches arrays
+                                $this->buildCaches($variation, $settings);
+                            }
+
+                            // Build the new row for printing in the CSV file
+                            $this->buildRow($variation, $settings);
+                        }
+                        catch(\Throwable $throwable)
+                        {
+                            $this->getLogger(__METHOD__)->error('ElasticExportTracdelightCOM::logs.fillRowError', [
+                                'Error message ' => $throwable->getMessage(),
+                                'Error line'     => $throwable->getLine(),
+                                'VariationId'    => $variation['id']
+                            ]);
+                        }
+
+                        // New line was added
+                        $limit++;
+                    }
+                }
+
+            } while ($elasticSearch->hasNext());
+        }
     }
 
-	/**
-	 * @param $variation
-	 * @param $settings
-	 */
-    private function buildRow($variation, $settings)
+    /**
+     * Creates the header of the CSV file.
+     *
+     * @return array
+     */
+    private function head():array
+    {
+        return array(
+
+            // Mandatory fields
+            'Artikelnummer',
+            'Produkttitel',
+            'Bild-URL',
+            'Deeplink',
+            'Produkt-Kategorie',
+            'Produkt-Beschreibung',
+            'Preis',
+            'Währung',
+            'Marke',
+            'Versandkosten',
+            'Geschlecht', // only mandatory for clothes
+            'Grundpreis', // only mandatory for cosmetics
+
+            // Optional fields
+            'Streichpreis',
+            'Lieferzeit',
+            'Produktstamm-ID',
+            'EAN',
+            'Bild2-URL',
+            'Bild3-URL',
+            'Bild4-URL',
+            'Bild5-URL',
+            'Größe',
+            'Farbe',
+            'Material',
+        );
+    }
+
+    /**
+     * Creates the variation row and prints it into the CSV file.
+     *
+     * @param $variation
+     * @param KeyValue $settings
+     */
+    private function buildRow($variation, KeyValue $settings)
 	{
-		$priceList = $this->elasticExportPriceHelper->getPriceList($variation, $settings);
+        // Get the price list
+        $priceList = $this->elasticExportPriceHelper->getPriceList($variation, $settings);
 
-		$price['variationRetailPrice.price'] = $priceList['price'];
-		$rrp = $priceList['recommendedRetailPrice'];
+        // Only variations with the Retail Price greater than zero will be handled
+        if(!is_null($priceList['price']) && $priceList['price'] > 0)
+        {
+            // Get shipping cost
+            $shippingCost = $this->getShippingCost($variation);
 
-		$rrp = $rrp > $price['variationRetailPrice.price'] ? $rrp : '';
+            $data = [
 
-		// Get shipping costs
-		$shippingCost = $this->elasticExportHelper->getShippingCost($variation['data']['item']['id'], $settings);
-		if(!is_null($shippingCost))
-		{
-			$shippingCost = number_format((float)$shippingCost, 2, '.');
-		}
-		else
-		{
-			$shippingCost = '';
-		}
+                // Mandatory fields
+                'Artikelnummer'         => $variation['id'],
+                'Produkttitel'          => $this->elasticExportHelper->getMutatedName($variation, $settings),
+                'Bild-URL'              => $this->elasticExportHelper->getMainImage($variation, $settings),
+                'Deeplink'              => $this->elasticExportHelper->getMutatedUrl($variation, $settings, true, false),
+                'Produkt-Kategorie'     => $this->elasticExportHelper->getCategory((int)$variation['data']['defaultCategories'][0]['id'], $settings->get('lang'), $settings->get('plentyId')),
+                'Produkt-Beschreibung'  => $this->elasticExportHelper->getMutatedDescription($variation, $settings, 256),
+                'Preis'                 => $priceList['price'],
+                'Währung'               => $priceList['currency'],
+                'Marke'                 => $this->elasticExportHelper->getExternalManufacturerName((int)$variation['data']['item']['manufacturer']['id']),
+                'Versandkosten'         => $shippingCost,
+                'Geschlecht'            => $this->getProperty($variation, $settings, 'gender'), // only mandatory for clothes
+                'Grundpreis'            => $this->elasticExportPriceHelper->getBasePrice($variation, $variation, $priceList['price'], $settings->get('lang')), // only mandatory for cosmetics
 
-		$data = [
+                // Optional fields
+                'Streichpreis'          => ($priceList['recommendedRetailPrice'] > $priceList['price']) ? $priceList['recommendedRetailPrice'] : '',
+                'Lieferzeit'            => $this->elasticExportHelper->getAvailability($variation, $settings, false),
+                'Produktstamm-ID'       => $variation['data']['item']['id'],
+                'EAN'                   => $this->elasticExportHelper->getBarcodeByType($variation, $settings->get('barcode')),
+                'Bild2-URL'             => $this->getImageByNumber($variation, $settings, 1),
+                'Bild3-URL'             => $this->getImageByNumber($variation, $settings, 2),
+                'Bild4-URL'             => $this->getImageByNumber($variation, $settings, 3),
+                'Bild5-URL'             => $this->getImageByNumber($variation, $settings, 4),
+                'Größe'                 => $this->getProperty($variation, $settings, 'size'),
+                'Farbe'                 => $this->getProperty($variation, $settings, 'color'),
+                'Material'              => $this->getProperty($variation, $settings, 'material')
+            ];
 
-			// Mandatory fields
-			'Artikelnummer'         => $variation['id'],
-			'Produkttitel'          => $this->elasticExportHelper->getMutatedName($variation, $settings),
-			'Bild-URL'              => $this->elasticExportHelper->getMainImage($variation, $settings),
-			'Deeplink'              => $this->elasticExportHelper->getMutatedUrl($variation, $settings, true, false),
-			'Produkt-Kategorie'     => $this->elasticExportHelper->getCategory((int)$variation['data']['defaultCategories'][0]['id'], $settings->get('lang'), $settings->get('plentyId')),
-			'Produkt-Beschreibung'  => $this->elasticExportHelper->getMutatedDescription($variation, $settings, 256),
-			'Preis'                 => $price['variationRetailPrice.price'],
-			'Währung'               => $priceList['currency'],
-			'Marke'                 => $this->elasticExportHelper->getExternalManufacturerName((int)$variation['data']['item']['manufacturer']['id']),
-			'Versandkosten'         => $shippingCost,
-			'Geschlecht'            => $this->getProperty($variation, $settings, 'gender'), // only mandatory for clothes
-			'Grundpreis'            => $this->elasticExportHelper->getBasePrice($variation, $price, $settings->get('lang')), // only mandatory for cosmetics
-
-			// Optional fields
-			'Streichpreis'          => $rrp,
-			'Lieferzeit'            => $this->elasticExportHelper->getAvailability($variation, $settings, false),
-			'Produktstamm-ID'       => $variation['data']['item']['id'],
-			'EAN'                   => $this->elasticExportHelper->getBarcodeByType($variation, $settings->get('barcode')),
-			'Bild2-URL'             => $this->getImageByNumber($variation, $settings, 1),
-			'Bild3-URL'             => $this->getImageByNumber($variation, $settings, 2),
-			'Bild4-URL'             => $this->getImageByNumber($variation, $settings, 3),
-			'Bild5-URL'             => $this->getImageByNumber($variation, $settings, 4),
-			'Größe'                 => $this->getProperty($variation, $settings, 'size'),
-			'Farbe'                 => $this->getProperty($variation, $settings, 'color'),
-			'Material'              => $this->getProperty($variation, $settings, 'material')
-		];
-
-		$this->addCSVContent(array_values($data));
+            $this->addCSVContent(array_values($data));
+        }
 	}
 
-	/**
-	 * Get variation image by number.
-	 *
-	 * @param array $variation
-	 * @param KeyValue $settings
-	 * @param int $number
-	 * @return string
-	 */
-	private function getImageByNumber($variation, KeyValue $settings, int $number):string
-	{
-		if(array_key_exists($variation['id'], $this->imageCache))
-		{
-			return $this->returnImagePath($variation, $number);
-		}
+    /**
+     * Get variation image by number.
+     *
+     * @param array $variation
+     * @param KeyValue $settings
+     * @param int $number
+     * @return string
+     */
+    private function getImageByNumber($variation, KeyValue $settings, int $number):string
+    {
+        if(array_key_exists($variation['id'], $this->imageCache))
+        {
+            return $this->returnImagePath($variation, $number);
+        }
 
-		$this->imageCache[$variation['id']] = $this->elasticExportHelper->getImageListInOrder($variation, $settings, 4, 'variationImages');
+        $this->imageCache[$variation['id']] = $this->elasticExportHelper->getImageListInOrder($variation, $settings, 4, ElasticExportCoreHelper::VARIATION_IMAGES);
 
-		return $this->returnImagePath($variation, $number);
-	}
+        return $this->returnImagePath($variation, $number);
+    }
 
-	/**
-	 * @param $variation
-	 * @param int $number
-	 * @return string
-	 */
-	private function returnImagePath($variation, int $number)
-	{
-		if(array_key_exists($number, $this->imageCache[$variation['id']]))
-		{
-			return $this->imageCache[$variation['id']][$number];
-		}
-		else
-		{
-			return '';
-		}
-	}
+    /**
+     * Get the variation image path.
+     *
+     * @param $variation
+     * @param int $number
+     * @return string
+     */
+    private function returnImagePath($variation, int $number):string
+    {
+        if(array_key_exists($number, $this->imageCache[$variation['id']]))
+        {
+            return $this->imageCache[$variation['id']][$number];
+        }
+
+        return '';
+    }
 
     /**
      * Get variation attributes.
@@ -315,87 +343,64 @@ class TracdelightCOM extends CSVPluginGenerator
 	 *
 	 * @param array $variation
 	 * @param KeyValue $settings
-	 * @param string $propertyType
+	 * @param string $backendName
 	 * @return string
 	 */
-	public function getProperty($variation, KeyValue $settings, string $propertyType):string
+	public function getProperty($variation, KeyValue $settings, string $backendName):string
 	{
-		$itemPropertyList = $this->getItemPropertyList($variation, $settings);
+        // Get the cached properties for the item
+		$itemPropertyList = $this->elasticExportPropertyHelper->getItemPropertyList($variation, self::TRACDELIGHT_COM, $settings->get('lang'));
 
-		if(array_key_exists($propertyType, $itemPropertyList))
+        // Get the current attributes of the variation
+        $variationAttributesList = $this->getVariationAttributes($variation, $settings);
+
+        if(array_key_exists($backendName, $variationAttributesList))
+        {
+            return $variationAttributesList[$backendName];
+        }
+
+		if(array_key_exists($backendName, $itemPropertyList))
 		{
-			return $itemPropertyList[$propertyType];
+			return $itemPropertyList[$backendName];
 		}
 
 		return '';
 	}
 
-	/**
-	 * Returns a list of additional header for the CSV based on
-	 * the configured properties and builds also the property data for
-	 * further usage. The properties have to have a configuration for BeezUp.
-	 *
-	 * @param array $variation
-	 * @param KeyValue $settings
-	 * @return array
-	 */
-	private function getItemPropertyList($variation, $settings):array
-	{
-		if(!array_key_exists($variation['data']['item']['id'], $this->itemPropertyCache))
-		{
-			/**
-			 * @var PropertyNameRepositoryContract $propertyNameRepository
-			 */
-			$propertyNameRepository = pluginApp(PropertyNameRepositoryContract::class);
+    /**
+     * Get the shipping cost.
+     *
+     * @param $variation
+     * @return string
+     */
+    private function getShippingCost($variation):string
+    {
+        $shippingCost = null;
+        if(isset($this->shippingCostCache) && array_key_exists($variation['data']['item']['id'], $this->shippingCostCache))
+        {
+            $shippingCost = $this->shippingCostCache[$variation['data']['item']['id']];
+        }
 
-			/**
-			 * @var PropertyMarketReferenceRepositoryContract $propertyMarketReferenceRepository
-			 */
-			$propertyMarketReferenceRepository = pluginApp(PropertyMarketReferenceRepositoryContract::class);
+        if(!is_null($shippingCost) && $shippingCost > 0)
+        {
+            return number_format((float)$shippingCost, 2, '.', '');
+        }
 
-			if(!$propertyNameRepository instanceof PropertyNameRepositoryContract ||
-				!$propertyMarketReferenceRepository instanceof PropertyMarketReferenceRepositoryContract)
-			{
-				return [];
-			}
+        return '';
+    }
 
-			$list = array();
-
-			foreach($variation['data']['properties'] as $property)
-			{
-				if(!is_null($property['property']['id']) &&
-					$property['property']['valueType'] != 'file' &&
-					$property['property']['valueType'] != 'empty')
-				{
-					$propertyMarketReference = $propertyMarketReferenceRepository->findOne($property['property']['id'], self::TRACDELIGHT_COM);
-
-					if(
-						is_null($propertyMarketReference) ||
-						$propertyMarketReference->externalComponent == '0'
-					)
-					{
-						continue;
-					}
-
-
-					if($property['property']['valueType'] == 'text')
-					{
-						if(is_array($property['texts']) && !is_null($property['texts']['value']))
-						{
-							$list[(string)$propertyMarketReference->externalComponent] = $property['texts']['value'];
-						}
-					}
-					if($property['property']['valueType'] == 'selection')
-					{
-						if(is_array($property['selection']) && !is_null($property['selection']['name']))
-						{
-							$list[(string)$propertyMarketReference->externalComponent] = $property['selection']['name'];
-						}
-					}
-				}
-			}
-			$this->itemPropertyCache[$variation['data']['item']['id']] = array_merge($this->getVariationAttributes($variation, $settings), $list);
-		}
-		return $this->itemPropertyCache[$variation['data']['item']['id']];
-	}
+    /**
+     * Build the cache array for the item variation.
+     *
+     * @param array $variation
+     * @param KeyValue $settings
+     */
+    private function buildCaches($variation, KeyValue $settings)
+    {
+        if(!is_null($variation) && !is_null($variation['data']['item']['id']))
+        {
+            $shippingCost = $this->elasticExportHelper->getShippingCost($variation['data']['item']['id'], $settings, 0);
+            $this->shippingCostCache[$variation['data']['item']['id']] = (float)$shippingCost;
+        }
+    }
 }
