@@ -20,7 +20,7 @@ use Plenty\Plugin\Log\Loggable;
  */
 class TracdelightCOM extends CSVPluginGenerator
 {
-	use Loggable;
+    use Loggable;
 
     const TRACDELIGHT_COM = 130.00;
 
@@ -64,23 +64,28 @@ class TracdelightCOM extends CSVPluginGenerator
     /**
      * @var array
      */
+    private $attributesCache = [];
+
+    /**
+     * @var array
+     */
     private $imageCache = [];
 
-	/**
-	 * TracdelightCOM constructor.
-	 *
-	 * @param ArrayHelper $arrayHelper
-	 * @param AttributeValueNameRepositoryContract $attributeValueNameRepository
-	 */
+    /**
+     * TracdelightCOM constructor.
+     *
+     * @param ArrayHelper $arrayHelper
+     * @param AttributeValueNameRepositoryContract $attributeValueNameRepository
+     */
     public function __construct(ArrayHelper $arrayHelper, AttributeValueNameRepositoryContract $attributeValueNameRepository)
     {
-        $this->arrayHelper                  = $arrayHelper;
+        $this->arrayHelper = $arrayHelper;
         $this->attributeValueNameRepository = $attributeValueNameRepository;
-	}
-    
+    }
+
     /**
      * Generates and populates the data into the CSV file.
-     * 
+     *
      * @param VariationElasticSearchScrollRepositoryContract $elasticSearch
      * @param array $formatSettings
      * @param array $filter
@@ -95,9 +100,9 @@ class TracdelightCOM extends CSVPluginGenerator
 
         $this->elasticExportPropertyHelper = pluginApp(ElasticExportPropertyHelper::class);
 
-		$settings = $this->arrayHelper->buildMapFromObjectList($formatSettings, 'key', 'value');
+        $settings = $this->arrayHelper->buildMapFromObjectList($formatSettings, 'key', 'value');
 
-		$this->setDelimiter(self::DELIMITER);
+        $this->setDelimiter(self::DELIMITER);
 
         $this->addCSVContent($this->head());
 
@@ -223,7 +228,7 @@ class TracdelightCOM extends CSVPluginGenerator
      * @param KeyValue $settings
      */
     private function buildRow($variation, KeyValue $settings)
-	{
+    {
         // Get the price list
         $priceList = $this->elasticExportPriceHelper->getPriceList($variation, $settings);
 
@@ -247,7 +252,7 @@ class TracdelightCOM extends CSVPluginGenerator
                 'Marke'                 => $this->elasticExportHelper->getExternalManufacturerName((int)$variation['data']['item']['manufacturer']['id']),
                 'Versandkosten'         => $shippingCost,
                 'Geschlecht'            => $this->getProperty($variation, $settings, 'gender'), // only mandatory for clothes
-                'Grundpreis'            => $this->elasticExportPriceHelper->getBasePrice($variation, $variation, $priceList['price'], $settings->get('lang')), // only mandatory for cosmetics
+                'Grundpreis'            => $this->elasticExportPriceHelper->getBasePrice($variation, $priceList['price'], $settings->get('lang')), // only mandatory for cosmetics
 
                 // Optional fields
                 'Streichpreis'          => ($priceList['recommendedRetailPrice'] > $priceList['price']) ? $priceList['recommendedRetailPrice'] : '',
@@ -265,7 +270,7 @@ class TracdelightCOM extends CSVPluginGenerator
 
             $this->addCSVContent(array_values($data));
         }
-	}
+    }
 
     /**
      * Get variation image by number.
@@ -281,6 +286,8 @@ class TracdelightCOM extends CSVPluginGenerator
         {
             return $this->returnImagePath($variation, $number);
         }
+
+        unset($this->imageCache);
 
         $this->imageCache[$variation['id']] = $this->elasticExportHelper->getImageListInOrder($variation, $settings, 4, ElasticExportCoreHelper::VARIATION_IMAGES);
 
@@ -313,59 +320,66 @@ class TracdelightCOM extends CSVPluginGenerator
      */
     private function getVariationAttributes($variation, KeyValue $settings):array
     {
-        $variationAttributes = [];
-
-        // Go through all the attributes
-        foreach($variation['data']['attributes'] as $variationAttribute)
+        if(!array_key_exists($variation['id'], $this->attributesCache))
         {
-            $attributeValueName = $this->attributeValueNameRepository->findOne($variationAttribute['valueId'], $settings->get('lang'));
+            unset($this->attributesCache);
 
-            if($attributeValueName instanceof AttributeValueName)
+            $variationAttributes = [];
+
+            // Go through all the attributes
+            foreach($variation['data']['attributes'] as $variationAttribute)
             {
-                // Check if the attribute is available for Tracdelight
-                if($attributeValueName->attributeValue->tracdelightValue)
+                $attributeValueName = $this->attributeValueNameRepository->findOne($variationAttribute['valueId'], $settings->get('lang'));
+
+                if($attributeValueName instanceof AttributeValueName)
                 {
-                    // Get the color and size attribute value
-                    if(($attributeValueName->attributeValue->attribute->backendName == 'Color' || $attributeValueName->attributeValue->attribute->backendName == 'Size')
-                        && !is_null($attributeValueName->attributeValue->tracdelightValue))
+                    // Check if the attribute is available for Tracdelight
+                    if($attributeValueName->attributeValue->tracdelightValue)
                     {
-                        $variationAttributes[strtolower($attributeValueName->attributeValue->attribute->backendName)] = $attributeValueName->attributeValue->tracdelightValue;
+                        // Get the color and size attribute value
+                        if(($attributeValueName->attributeValue->attribute->backendName == 'Color' || $attributeValueName->attributeValue->attribute->backendName == 'Size')
+                            && !is_null($attributeValueName->attributeValue->tracdelightValue))
+                        {
+                            $variationAttributes[strtolower($attributeValueName->attributeValue->attribute->backendName)] = $attributeValueName->attributeValue->tracdelightValue;
+                        }
                     }
                 }
             }
+
+            $this->attributesCache[$variation['id']] = $variationAttributes;
         }
 
-        return $variationAttributes;
+        return $this->attributesCache[$variation['id']];
     }
 
-	/**
-	 * Get property.
-	 *
-	 * @param array $variation
-	 * @param KeyValue $settings
-	 * @param string $backendName
-	 * @return string
-	 */
-	public function getProperty($variation, KeyValue $settings, string $backendName):string
-	{
+    /**
+     * Get property.
+     *
+     * @param array $variation
+     * @param KeyValue $settings
+     * @param string $backendName
+     * @return string
+     */
+    public function getProperty($variation, KeyValue $settings, string $backendName):string
+    {
         // Get the cached properties for the item
-		$itemPropertyList = $this->elasticExportPropertyHelper->getItemPropertyList($variation, self::TRACDELIGHT_COM, $settings->get('lang'));
+        $itemPropertyList = $this->elasticExportPropertyHelper->getItemPropertyList($variation, self::TRACDELIGHT_COM, $settings->get('lang'));
 
-        // Get the current attributes of the variation
+        // Get the cached attributes of the variation
         $variationAttributesList = $this->getVariationAttributes($variation, $settings);
 
         if(array_key_exists($backendName, $variationAttributesList))
         {
-            return $variationAttributesList[$backendName];
+            return (string)$variationAttributesList[$backendName];
         }
 
-		if(array_key_exists($backendName, $itemPropertyList))
-		{
-			return $itemPropertyList[$backendName];
-		}
+        if(array_key_exists($backendName, $itemPropertyList))
+        {
+            return (string)$itemPropertyList[$backendName];
+        }
 
-		return '';
-	}
+        return '';
+    }
 
     /**
      * Get the shipping cost.
