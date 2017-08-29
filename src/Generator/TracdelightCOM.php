@@ -8,6 +8,7 @@ use ElasticExport\Helper\ElasticExportPropertyHelper;
 use Plenty\Modules\DataExchange\Contracts\CSVPluginGenerator;
 use Plenty\Modules\Helper\Services\ArrayHelper;
 use Plenty\Modules\Item\Attribute\Contracts\AttributeValueNameRepositoryContract;
+use Plenty\Modules\Item\Attribute\Models\AttributeValue;
 use Plenty\Modules\Item\Attribute\Models\AttributeValueName;
 use Plenty\Modules\Helper\Models\KeyValue;
 use Plenty\Modules\Item\Search\Contracts\VariationElasticSearchScrollRepositoryContract;
@@ -333,14 +334,20 @@ class TracdelightCOM extends CSVPluginGenerator
 
                 if($attributeValueName instanceof AttributeValueName)
                 {
-                    // Check if the attribute is available for Tracdelight
-                    if($attributeValueName->attributeValue->tracdelightValue)
+                    if($attributeValueName->attributeValue instanceof AttributeValue)
                     {
-                        // Get the color and size attribute value
-                        if(($attributeValueName->attributeValue->attribute->backendName == 'Color' || $attributeValueName->attributeValue->attribute->backendName == 'Size')
-                            && !is_null($attributeValueName->attributeValue->tracdelightValue))
+                        // Check if the attribute has value for the Tracdelight market
+                        if(!empty($attributeValueName->attributeValue->tracdelightValue))
                         {
-                            $variationAttributes[strtolower($attributeValueName->attributeValue->attribute->backendName)] = $attributeValueName->attributeValue->tracdelightValue;
+                            // Check if it has the requested backendName
+                            if($attributeValueName->attributeValue->attribute->backendName == 'Gender' ||
+                                $attributeValueName->attributeValue->attribute->backendName == 'Size'  ||
+                                $attributeValueName->attributeValue->attribute->backendName == 'Color' ||
+                                $attributeValueName->attributeValue->attribute->backendName == 'Material'
+                            )
+                            {
+                                $variationAttributes[strtolower($attributeValueName->attributeValue->attribute->backendName)] = $attributeValueName->attributeValue->tracdelightValue;
+                            }
                         }
                     }
                 }
