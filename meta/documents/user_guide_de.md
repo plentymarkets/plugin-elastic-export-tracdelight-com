@@ -229,7 +229,7 @@ In der folgenden Tabelle finden Sie Hinweise zu den Einstellungen, Formateinstel
 		</td>
 		<td>
 		    <b>Pflichtfeld</b><br>
-			<b>Inhalt:</b> Der berechnete Grundpreis bezogen auf die <b>Grundpreis Einheit</b>.
+			<b>Inhalt:</b> Der berechnete Grundpreis bezogen auf die <b>Grundpreiseinheit</b>.
 		</td>        
 	</tr>
 	<tr>
