@@ -1,5 +1,11 @@
 # Release Notes für Elastic Export Tracdelight.com
 
+## v1.0.6 (2017-08-30)
+
+### Geändert
+- Das Format-Plugin basiert nun nur noch auf Elastic Search.
+- Die Performance wurde verbessert.
+
 ## v1.0.5 (2017-07-18)
 
 ### Behoben

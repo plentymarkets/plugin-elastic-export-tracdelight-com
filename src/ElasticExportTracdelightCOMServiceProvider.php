@@ -5,7 +5,6 @@ namespace ElasticExportTracdelightCOM;
 use Plenty\Modules\DataExchange\Services\ExportPresetContainer;
 use Plenty\Plugin\DataExchangeServiceProvider;
 
-
 /**
  * Class ElasticExportTracdelightCOMServiceProvider
  * @package ElasticExportTracdelightCOM
@@ -13,7 +12,7 @@ use Plenty\Plugin\DataExchangeServiceProvider;
 class ElasticExportTracdelightCOMServiceProvider extends DataExchangeServiceProvider
 {
     /**
-     * Abstract function for registering the service provider.
+     * Function for registering the service provider.
      */
     public function register()
     {

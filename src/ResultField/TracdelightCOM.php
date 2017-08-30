@@ -11,7 +11,6 @@ use Plenty\Modules\Item\Search\Mutators\DefaultCategoryMutator;
 use Plenty\Modules\Item\Search\Mutators\ImageMutator;
 use Plenty\Modules\Item\Search\Mutators\KeyMutator;
 
-
 /**
  * Class TracdelightCOM
  * @package ElasticExportTracdelightCOM\ResultField
@@ -24,7 +23,6 @@ class TracdelightCOM extends ResultFields
      * @var ArrayHelper
      */
     private $arrayHelper;
-
 
     /**
      * TracdelightCOM constructor.
@@ -50,7 +48,7 @@ class TracdelightCOM extends ResultFields
 
 		$this->setOrderByList(['item.id', ElasticSearch::SORTING_ORDER_ASC]);
 
-        $itemDescriptionFields = ['texts.urlPath', 'texts.keywords'];
+        $itemDescriptionFields = ['texts.urlPath', 'texts.keywords', 'texts.lang'];
 
         $itemDescriptionFields[] = ($settings->get('nameId')) ? 'texts.name' . $settings->get('nameId') : 'texts.name1';
 
@@ -73,8 +71,6 @@ class TracdelightCOM extends ResultFields
         {
             $itemDescriptionFields[] = 'texts.technicalData';
         }
-
-        $itemDescriptionFields[] = 'texts.lang';
 
         // Mutators
         /**
@@ -124,15 +120,16 @@ class TracdelightCOM extends ResultFields
         // Fields
         $fields = [
             [
-                //item
+                // Item
                 'item.id',
                 'item.manufacturer.id',
 
-                //variation
+                // Variation
                 'id',
                 'variation.availability.id',
+                'variation.stockLimitation',
 
-                //images
+                // Images
                 'images.all.urlMiddle',
                 'images.all.urlPreview',
                 'images.all.urlSecondPreview',
@@ -154,36 +151,38 @@ class TracdelightCOM extends ResultFields
                 'images.variation.path',
                 'images.variation.position',
 
-                //unit
+                // Unit
                 'unit.id',
                 'unit.content',
 
-                //barcodes
-                'barcodes.id',
+                // Barcodes
                 'barcodes.code',
                 'barcodes.type',
 
-                //defaultCategories
+                // DefaultCategories
                 'defaultCategories.id',
 
-                //attributes
+                // Attributes
                 'attributes.attributeId',
                 'attributes.valueId',
                 'attributes.attributeValueSetId',
 
-				//properties
-				'properties.property.id',
-				'properties.property.valueType',
-				'properties.selection.name',
-				'properties.selection.lang',
-				'properties.texts.value',
-				'properties.texts.lang'
+                // Properties
+                'properties.property.id',
+                'properties.property.valueType',
+                'properties.selection.name',
+                'properties.selection.lang',
+                'properties.texts.value',
+                'properties.texts.lang',
+                'properties.valueInt',
+                'properties.valueFloat',
             ],
+
             [
+                $barcodeMutator,
                 $languageMutator,
 				$defaultCategoryMutator,
-				$barcodeMutator,
-				$keyMutator
+				$keyMutator,
             ],
         ];
 
@@ -195,13 +194,18 @@ class TracdelightCOM extends ResultFields
 
         foreach($itemDescriptionFields as $itemDescriptionField)
         {
-            //texts
+            // Texts
             $fields[0][] = $itemDescriptionField;
         }
 
         return $fields;
     }
 
+    /**
+     * Returns the list of keys.
+     *
+     * @return array
+     */
     private function getKeyList()
 	{
 		return [
@@ -219,85 +223,104 @@ class TracdelightCOM extends ResultFields
 		];
 	}
 
-	/**
-	 * @return array
-	 */
+    /**
+     * Returns the list of nested keys.
+     *
+     * @return mixed
+     */
 	private function getNestedKeyList()
 	{
 		return [
 			'keys' => [
+                // Images
+                'images.all',
+                'images.item',
+                'images.variation',
+
+                // Barcodes
+                'barcodes',
+
+                // Default categories
+                'defaultCategories',
+
+                // Texts
+                'texts',
+
 				// Attributes
 				'attributes',
 
-				// Barcodes
-				'barcodes',
-
-				// Default categories
-				'defaultCategories',
-
-				// Images
-				'images.all',
-				'images.item',
-				'images.variation',
+                // Properties
+                'properties',
 			],
 
 			'nestedKeys' => [
+                // Images
+                'images.all' => [
+                    'urlMiddle',
+                    'urlPreview',
+                    'urlSecondPreview',
+                    'url',
+                    'path',
+                    'position',
+                ],
+                'images.item' => [
+                    'urlMiddle',
+                    'urlPreview',
+                    'urlSecondPreview',
+                    'url',
+                    'path',
+                    'position',
+                ],
+                'images.variation' => [
+                    'urlMiddle',
+                    'urlPreview',
+                    'urlSecondPreview',
+                    'url',
+                    'path',
+                    'position',
+                ],
+
+                // Barcodes
+                'barcodes' => [
+                    'code',
+                    'type',
+                ],
+
+                // Default categories
+                'defaultCategories' => [
+                    'id',
+                ],
+
+                // Texts
+                'texts' => [
+                    'urlPath',
+                    'name1',
+                    'name2',
+                    'name3',
+                    'shortDescription',
+                    'description',
+                    'technicalData',
+                    'keywords',
+                ],
+
 				// Attributes
 				'attributes' => [
 					'attributeValueSetId',
 					'attributeId',
-					'valueId'
+					'valueId',
 				],
 
-				// Barcodes
-				'barcodes' => [
-					'id',
-					'code',
-					'type'
-				],
-
-				// Default categories
-				'defaultCategories' => [
-					'id'
-				],
-
-				// Images
-				'images.all' => [
-					'urlMiddle',
-					'urlPreview',
-					'urlSecondPreview',
-					'url',
-					'path',
-					'position',
-				],
-				'images.item' => [
-					'urlMiddle',
-					'urlPreview',
-					'urlSecondPreview',
-					'url',
-					'path',
-					'position',
-				],
-				'images.variation' => [
-					'urlMiddle',
-					'urlPreview',
-					'urlSecondPreview',
-					'url',
-					'path',
-					'position',
-				],
-
-				// texts
-				'texts' => [
-					'urlPath',
-					'name1',
-					'name2',
-					'name3',
-					'shortDescription',
-					'description',
-					'technicalData',
-					'lang'
-				],
+                // Proprieties
+                'properties' => [
+                    'property.id',
+                    'property.valueType',
+                    'selection.name',
+                    'selection.lang',
+                    'texts.value',
+                    'texts.lang',
+                    'valueInt',
+                    'valueFloat',
+                ],
 			]
 		];
 	}
