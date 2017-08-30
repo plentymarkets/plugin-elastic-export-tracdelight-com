@@ -323,4 +323,4 @@ The following table lists details for settings, format settings and recommended 
 
 ## 4 License
 
-This project is licensed under the GNU AFFERO GENERAL PUBLIC LICENSE.- find further information in the [LICENSE.md](https://github.com/plentymarkets/plugin-elastic-export-tracdelight-com/blob/master/LICENSE.md).
+This project is licensed under the GNU AFFERO GENERAL PUBLIC LICENSE.- find further information in the [LICENSE.md](https://github.com/plentymarkets/plugin-elastic-export-tracdelight-com/blob/master/LICENSE.md). 
