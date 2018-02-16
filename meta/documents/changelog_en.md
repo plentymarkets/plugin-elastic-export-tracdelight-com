@@ -1,5 +1,10 @@
 # Release Notes for Elastic Export Tracdelight.com
 
+## v1.0.7 (2018-02-16)
+
+### Changed
+- Updated plugin short description.
+
 ## v1.0.6 (2017-08-30)
 
 ### Changed 
