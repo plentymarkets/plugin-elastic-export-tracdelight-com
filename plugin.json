@@ -2,14 +2,14 @@
   "name": "ElasticExportTracdelightCOM",
   "namespace": "ElasticExportTracdelightCOM",
   "type": "export",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "license": "GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007",
   "pluginIcon": "icon_plugin_md.png",
   "price": 0.00,
   "description": "This plugin adds the format Tracdelight.com to the Elastic Export.",
   "shortDescription": {
-    "de": "Das Plugin ElasticExportTracdelightCOM fügt das Datenformat TracdelightCOM-Plugin zum Elastischen Export hinzu.",
-    "en": "This plugin adds the format TracdelightCOM-Plugin to the elastic export."
+    "de": "Die Integration des Datenformats tracdelight-Plugin ermöglicht die Artikeldatenübertragung zum Affiliate-Dienstleister tracdelight über den elastischen Export.",
+    "en": "The integration of the data format tracdelight-Plugin enables the transfer of item data to the affiliate service provider tracdelight via the elastic export."
   },
   "categories": [
     "3523"
