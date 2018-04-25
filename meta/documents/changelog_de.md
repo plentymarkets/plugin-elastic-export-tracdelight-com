@@ -1,5 +1,11 @@
 # Release Notes für Elastic Export Tracdelight.com
 
+## v1.0.8 (2018-04-25)
+
+### Geändert
+- Die Filtrierung der Varianten wird durch die Klasse FiltrationService vorgenommen.
+- Vorschaubilder aktualisiert.
+
 ## v1.0.7 (2018-02-16)
 
 ### Geändert
