@@ -46,7 +46,9 @@ class TracdelightCOM extends ResultFields
 
         $reference = $settings->get('referrerId') ? $settings->get('referrerId') : self::TRACDELIGHT_COM;
 
-		$this->setOrderByList(['item.id', ElasticSearch::SORTING_ORDER_ASC]);
+		$this->setOrderByList([
+			'path' => 'item.id',
+			'order' => ElasticSearch::SORTING_ORDER_ASC]);
 
         $itemDescriptionFields = ['texts.urlPath', 'texts.keywords', 'texts.lang'];
 
@@ -104,7 +106,7 @@ class TracdelightCOM extends ResultFields
         /**
          * @var LanguageMutator $languageMutator
          */
-        $languageMutator = pluginApp(LanguageMutator::class, [[$settings->get('lang')]]);
+		$languageMutator = pluginApp(LanguageMutator::class, ['languages' => [$settings->get('lang')]]);
 
 		/**
 		 * @var KeyMutator
