@@ -1,5 +1,10 @@
 # Release Notes für Elastic Export Tracdelight.com
 
+## v1.0.10 (2018-07-26)
+
+### Geändert
+- Dem User Guide wurden weitere Informationen zur Einrichtung des Plugins hinzugefügt.
+
 ## v1.0.9 (2018-04-30)
 
 ### Geändert
