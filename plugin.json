@@ -2,7 +2,7 @@
   "name": "ElasticExportTracdelightCOM",
   "namespace": "ElasticExportTracdelightCOM",
   "type": "export",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "license": "GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007",
   "pluginIcon": "icon_plugin_md.png",
   "price": 0.00,
@@ -17,7 +17,7 @@
     "en":"tracdelight"
   },
   "require": ["ElasticExport"],
-  "author": "plentymarkets GmbH",
+  "author": "plentysystems AG",
   "authorIcon": "icon_author_xs.png",
   "serviceProvider": "ElasticExportTracdelightCOM\\ElasticExportTracdelightCOMServiceProvider"
 }
