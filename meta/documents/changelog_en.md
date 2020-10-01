@@ -1,5 +1,10 @@
 # Release Notes for Elastic Export Tracdelight.com
 
+## v1.0.13 (2020-04-03)
+
+### Changed
+- The user guide was updated (moved user guide to plentymarkets manual).
+
 ## v1.0.12 (2019-10-11)
 
 ### Changed
@@ -66,6 +71,6 @@
 - Changed plugin icons.
 
 ## v1.0.0 (2017-03-09)
- 
+
 ### Added
 - Added initial plugin files
