@@ -2,7 +2,7 @@
   "name": "ElasticExportTracdelightCOM",
   "namespace": "ElasticExportTracdelightCOM",
   "type": "export",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "license": "GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007",
   "pluginIcon": "icon_plugin_md.png",
   "price": 0.00,
@@ -21,5 +21,8 @@
   },
   "author": "plentysystems AG",
   "authorIcon": "icon_author_xs.png",
-  "serviceProvider": "ElasticExportTracdelightCOM\\ElasticExportTracdelightCOMServiceProvider"
+  "serviceProvider": "ElasticExportTracdelightCOM\\ElasticExportTracdelightCOMServiceProvider",
+  "platform": {
+    "php": ">=7.3 <8.1"
+}
 }
